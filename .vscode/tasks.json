@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build ServerApp",
+            "type": "shell",
+            "command": "cmake --build build --config Debug --target ServerApp -j 8",
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        }
+    ]
+} 
