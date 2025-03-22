@@ -1,7 +1,0 @@
-{
-    "test_cases": [
-        {"input": [1, 2], "expected": 3},
-        {"input": [-5, 5], "expected": 0},
-        {"input": [100, 200], "expected": 300}
-    ]
-}

@@ -8,79 +8,60 @@
 #include <sstream>
 #include <vector>
 
+#include "session.hpp"
+#include "WSAContext.hpp"
+
 #pragma comment(lib, "Ws2_32.lib")
 
-// 线程安全输出锁
-class ConsoleLock
-{
-public:
-    ConsoleLock() { InitializeCriticalSection(&cs); }
-    ~ConsoleLock() { DeleteCriticalSection(&cs); }
+std::shared_ptr<iocp_server::session> server_session = nullptr;
 
-    void print(const char *msg)
-    {
-        EnterCriticalSection(&cs);
-        std::cout << "[服务器] " << msg << std::endl;
-        LeaveCriticalSection(&cs);
-    }
-
-private:
-    CRITICAL_SECTION cs;
-};
-
-std::vector<char> SerializeData(int32_t number, const std::string &str)
+static std::vector<char> serialize_data(int32_t number, const std::string& str)
 {
     std::vector<char> buffer;
 
     // 1. 序列化 int32 (转换为网络字节序)
     int32_t net_number = htonl(number);
     buffer.insert(buffer.end(),
-                  reinterpret_cast<char *>(&net_number),
-                  reinterpret_cast<char *>(&net_number) + sizeof(int32_t));
+                  reinterpret_cast<char*>(&net_number),
+                  reinterpret_cast<char*>(&net_number) + sizeof(int32_t));
 
-    // 2. 序列化 string 长度 (转换为网络字节序)
-    // int32_t str_length = static_cast<int32_t>(str.size());
-    // int32_t net_str_length = htonl(str_length);
-    // buffer.insert(buffer.end(),
-    //               reinterpret_cast<char *>(&net_str_length),
-    //               reinterpret_cast<char *>(&net_str_length) + sizeof(int32_t));
-
-    // 3. 序列化 string 内容
+    // 2. 序列化 string 内容
     buffer.insert(buffer.end(), str.begin(), str.end());
 
     return buffer;
 }
 
-// 接收线程函数
-DWORD WINAPI RecvThread(LPVOID lpParam)
+static DWORD WINAPI recv_thread(LPVOID lpParam)
 {
     SOCKET sock = reinterpret_cast<SOCKET>(lpParam);
-    ConsoleLock console;
     char buffer[4096];
 
     while (true)
     {
-        int ret = recv(sock, buffer, sizeof(buffer) - 1, 0); // 保留1字节给终止符
+        int ret = recv(sock, buffer, sizeof(buffer) - 1, 0);
 
         if (ret > 0)
         {
-            buffer[ret] = '\0'; // 添加字符串终止符
-            console.print(buffer);
+            buffer[ret] = '\0';
+            server_session->receive_from_buffer(buffer, ret, [&](const std::string& str)
+            {
+                std::cout << str << "\n";
+            });
         }
         else if (ret == 0)
         {
-            console.print("连接已由服务器关闭");
+            std::cout << ("连接已由服务器关闭") << "\n";
             break;
         }
         else
         {
             if (WSAGetLastError() == WSAECONNRESET)
             {
-                console.print("连接被强制重置");
+                std::cout << ("连接被强制重置") << "\n";
             }
             else
             {
-                console.print("接收错误");
+                std::cout << "接收错误" << "\n";
             }
             break;
         }
@@ -90,57 +71,50 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 
 int main()
 {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    WSAContext ct;
 
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET server_socket = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     serverAddr.sin_port = htons(9527);
 
-    if (connect(sock, (sockaddr *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    if (connect(server_socket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
     {
-        std::cerr << "连接失败: " << WSAGetLastError() << std::endl;
-        closesocket(sock);
-        WSACleanup();
+        std::cerr << "连接失败: " << WSAGetLastError() << '\n';
+        closesocket(server_socket);
         return 1;
     }
 
+    server_session = std::make_shared<iocp_server::session>(server_socket);
+
     // 启动接收线程
-    HANDLE hThread = CreateThread(nullptr, 0, RecvThread,
-                                  reinterpret_cast<LPVOID>(sock), 0, nullptr);
-    if (!hThread)
+    const HANDLE rece_thread = CreateThread(nullptr, 0, recv_thread, (LPVOID)(server_socket), 0, nullptr);
+    if (!rece_thread)
     {
-        std::cerr << "线程创建失败" << std::endl;
-        closesocket(sock);
-        WSACleanup();
+        std::cerr << "线程创建失败" << '\n';
         return 1;
     }
 
     std::string input;
     while (true)
     {
-        // std::getline(std::cin, input);
-        std::cin >> input;
+        std::getline(std::cin, input);
         if (input == "q")
         {
-            shutdown(sock, SD_SEND);
             break;
         }
         std::cout << input << "\n";
-        
-        auto data = SerializeData(input.length() + sizeof(int32_t), input);
 
-        int sent = send(sock, data.data(), data.size(), 0);
-        if (sent == SOCKET_ERROR)
+        auto data = serialize_data(sizeof(int32_t) + input.length(), input);
+
+        if (server_session->send_sync(data) == SOCKET_ERROR)
         {
-            std::cerr << "发送失败: " << WSAGetLastError() << std::endl;
+            std::cerr << "发送失败: " << WSAGetLastError() << '\n';
             break;
         }
     }
 
-    WaitForSingleObject(hThread, 2000); 
-    closesocket(sock);
+    WaitForSingleObject(rece_thread, 2000);
     return 0;
 }

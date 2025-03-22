@@ -1,20 +1,16 @@
 #pragma once
 #include <iostream>
-#include <vector>
-#include "VOverlapped.hpp"
+#include "v_overlapped.hpp"
 #include "WSAContext.hpp"
-#include "Server.hpp"
-
-void InitWs2();
-void UninitWs32();
+#include "server.hpp"
 
 int main()
 {
     try
     {
         WSAContext ct;
-        IOCPServer server("127.0.0.1", 9527);
-        server.Start();
+        iocp_server::server server("127.0.0.1", 9527);
+        server.start();
 
         // 保持主线程运行
         while (true)
@@ -22,9 +18,9 @@ int main()
             Sleep(1);
         }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
-        std::cerr << "Server error: " << e.what() << std::endl;
+        std::cerr << "Server error: " << e.what() << '\n';
         return 1;
     }
 

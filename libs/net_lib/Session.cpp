@@ -1,33 +1,86 @@
 #pragma once
+#include <functional>
 #include <sstream>
 #include "Session.hpp"
 
-Session::~Session()
+namespace iocp_server
 {
-    if (m_sock != INVALID_SOCKET)
+    void session::receive_from_buffer(const CHAR buffer[], const DWORD rece_length,
+                                      const std::function<void(std::string&)>& call_back)
     {
-        closesocket(m_sock);
-    }
-    std::cout << "Session 销毁 : " << m_id << "\n";
-}
-
-void Session::SendAsync(std::string s)
-{
-    VOverlapped *overlapped = new VOverlapped(m_sock, IO_SEND);
-    memcpy(overlapped->m_buf.buf, s.c_str(), s.length());
-
-    DWORD flags = 0;
-    if (WSASend(m_sock, &overlapped->m_buf, 1, nullptr, flags, overlapped, nullptr) == SOCKET_ERROR)
-    {
-        if (WSAGetLastError() != WSA_IO_PENDING)
+        memcpy(ring_buffer + cur_size, buffer, rece_length);
+        cur_size += rece_length;
+        int offset = 0;
+        while (cur_size - offset >= sizeof(int32_t))
         {
-            throw std::runtime_error("WSASend failed");
+            // 处理长度
+            int length = ntohl(*reinterpret_cast<const int32_t*>(ring_buffer + offset));
+            if (cur_size - offset < length)
+            {
+                break;
+            }
+            std::cout << "Parsed length (from combined buffer): " << length << std::endl;
+
+            // 处理一个包
+            std::ostringstream oss;
+            oss << "[客户端" << get_id() << "] : " << std::string(
+                ring_buffer + offset + 4, length - 4);
+            std::string sendStr = oss.str();
+            std::cout << sendStr << std::endl;
+
+            if (call_back != nullptr)
+            {
+                call_back(sendStr);
+            }
+
+            offset += length;
+        };
+
+        if (offset > 0)
+        {
+            if (cur_size - offset > 0)
+            {
+                memcpy(ring_buffer, ring_buffer + offset,
+                       cur_size - offset);
+            }
+
+            cur_size -= offset;
         }
     }
-}
 
-int Session::GenerateID() noexcept
-{
-    static std::atomic<int> counter(0); // 静态原子计数器
-    return counter.fetch_add(1, std::memory_order_relaxed);
+    session::~session()
+    {
+        if (m_sock != INVALID_SOCKET)
+        {
+            closesocket(m_sock);
+        }
+        std::cout << "Session 销毁 : " << m_id << "\n";
+    }
+
+    void session::send_async(const std::string& message) const
+    {
+        const auto overlapped = new v_overlapped(m_sock, IO_SEND);
+        memcpy(overlapped->m_buf.buf, message.c_str(), message.length());
+
+        constexpr DWORD flags = 0;
+        if (WSASend(m_sock, &overlapped->m_buf, 1, nullptr, flags, overlapped, nullptr) == SOCKET_ERROR)
+        {
+            if (WSAGetLastError() != WSA_IO_PENDING)
+            {
+                throw std::runtime_error("WSASend failed");
+            }
+        }
+    }
+
+    int session::send_sync(const std::vector<char>& message) const
+    {
+        int code = send(m_sock, message.data(), message.size(), 0);
+        return code;
+    }
+
+    int session::generate_id() noexcept
+    {
+        static std::atomic<int> counter(0); // 静态原子计数器
+        return counter.fetch_add(1, std::memory_order_relaxed);
+    }
 }

@@ -1,47 +1,52 @@
 #pragma once
-#include "VOverlapped.hpp"
+#include "v_overlapped.hpp"
 #include <memory>
 #include <iostream>
+#include <functional>
 
-class Session
+namespace iocp_server
 {
-    static const int BUFFERSIZE = 2048;
-
-public:
-    Session() : m_sock(INVALID_SOCKET)
+    class session
     {
-    }
+        static constexpr int buffer_size = 2048;
 
-    explicit Session(SOCKET sock) : m_sock(sock), m_id(GenerateID())
-    {
-        std::cout << "Session 创建 : " << m_id << "\n";
-    }
+    public:
+        session() : m_sock(INVALID_SOCKET), m_id(-1)
+        {
+        }
 
-    Session(const Session &) = delete;
-    Session &operator=(const Session &) = delete;
-    Session(Session &&other) noexcept
-        : m_sock(std::exchange(other.m_sock, INVALID_SOCKET)),
-          m_id(other.m_id) // 移动后保留原ID
-    {
-    }
+        explicit session(const SOCKET sock) : m_sock(sock), m_id(generate_id())
+        {
+            std::cout << "Session 创建 : " << m_id << "\n";
+        }
 
+        session(const session&) = delete;
+        session& operator=(const session&) = delete;
+        void session::receive_from_buffer(const CHAR buffer[], const DWORD rece_length,
+                                          const std::function<void(std::string&)>& call_back);
 
+        session(session&& other) noexcept
+            : m_sock(std::exchange(other.m_sock, INVALID_SOCKET)),
+              m_id(other.m_id) // 移动后保留原ID
+        {
+        }
 
+        ~session();
+        void send_async(const std::string& message) const;
+        int send_sync(const std::vector<char>& message) const;
 
-    ~Session();
-    void SendAsync(std::string s);
+        [[nodiscard]] int get_id() const noexcept { return m_id; }
 
-    int GetID() const noexcept { return m_id; }
+    private:
+        static int generate_id() noexcept;
 
-private:
-    static int GenerateID() noexcept;
+    private:
+        SOCKET m_sock;
+        int m_id;
+        static std::atomic<int> idGen;
 
-private:
-    SOCKET m_sock;
-    int m_id;
-    static std::atomic<int> idGen;
-
-public:
-    char ringBuffer[BUFFERSIZE];
-    int32_t curSize = 0;
-};
+    public:
+        char ring_buffer[buffer_size]{};
+        int32_t cur_size = 0;
+    };
+}
