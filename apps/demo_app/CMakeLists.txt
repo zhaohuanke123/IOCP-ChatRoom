@@ -7,7 +7,15 @@ if(WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-add_executable(iocp_server main.cpp)
+get_directory_property(PARENT_VARS DIRECTORY .. VARIABLES PROTO_SOURCES)
+
+add_executable(iocp_server main.cpp
+    ${PARENT_VARS_PROTO_SOURCES}
+)
+
+add_dependencies(iocp_server person_proto)
 
 # 链接Windows Socket库
-target_link_libraries(iocp_server PRIVATE Ws2_32.lib)
+target_link_libraries(iocp_server PRIVATE Ws2_32.lib
+    ${PROTO_GEN_DIR}
+)

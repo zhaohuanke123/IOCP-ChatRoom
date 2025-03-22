@@ -6,7 +6,7 @@
 #include "v_overlapped.hpp"
 #include "Session.hpp"
 
-namespace iocp_server
+namespace iocp_socket
 {
     class server
     {

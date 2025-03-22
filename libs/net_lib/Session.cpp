@@ -3,7 +3,7 @@
 #include <sstream>
 #include "Session.hpp"
 
-namespace iocp_server
+namespace iocp_socket
 {
     void session::receive_from_buffer(const CHAR buffer[], const DWORD rece_length,
                                       const std::function<void(std::string&)>& call_back)
@@ -19,14 +19,12 @@ namespace iocp_server
             {
                 break;
             }
-            std::cout << "Parsed length (from combined buffer): " << length << std::endl;
+            std::cout << "Parsed length (from combined buffer): " << length << '\n';
 
             // 处理一个包
             std::ostringstream oss;
-            oss << "[客户端" << get_id() << "] : " << std::string(
-                ring_buffer + offset + 4, length - 4);
+            oss << std::string( ring_buffer + offset + 4, length - 4);
             std::string sendStr = oss.str();
-            std::cout << sendStr << std::endl;
 
             if (call_back != nullptr)
             {
@@ -59,10 +57,16 @@ namespace iocp_server
 
     void session::send_async(const std::string& message) const
     {
+        send_async(message.data(), message.size());
+    }
+
+    void session::send_async(const char stream[], const size_t length) const
+    {
         const auto overlapped = new v_overlapped(m_sock, IO_SEND);
-        memcpy(overlapped->m_buf.buf, message.c_str(), message.length());
+        memcpy(overlapped->m_buf.buf, stream, length);
 
         constexpr DWORD flags = 0;
+        overlapped->m_buf.len = length;
         if (WSASend(m_sock, &overlapped->m_buf, 1, nullptr, flags, overlapped, nullptr) == SOCKET_ERROR)
         {
             if (WSAGetLastError() != WSA_IO_PENDING)

@@ -9,7 +9,7 @@ int main()
     try
     {
         WSAContext ct;
-        iocp_server::server server("127.0.0.1", 9527);
+        iocp_socket::server server("127.0.0.1", 9527);
         server.start();
 
         // 保持主线程运行

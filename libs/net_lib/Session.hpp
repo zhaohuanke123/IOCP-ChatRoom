@@ -4,7 +4,7 @@
 #include <iostream>
 #include <functional>
 
-namespace iocp_server
+namespace iocp_socket
 {
     class session
     {
@@ -33,6 +33,7 @@ namespace iocp_server
 
         ~session();
         void send_async(const std::string& message) const;
+        void session::send_async(const char stream[], const size_t length) const;
         int send_sync(const std::vector<char>& message) const;
 
         [[nodiscard]] int get_id() const noexcept { return m_id; }

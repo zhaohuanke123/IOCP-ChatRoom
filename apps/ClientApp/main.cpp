@@ -10,39 +10,25 @@
 
 #include "session.hpp"
 #include "WSAContext.hpp"
+#include "../../build/libs/net_lib/package_handler.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
-std::shared_ptr<iocp_server::session> server_session = nullptr;
-
-static std::vector<char> serialize_data(int32_t number, const std::string& str)
-{
-    std::vector<char> buffer;
-
-    // 1. 序列化 int32 (转换为网络字节序)
-    int32_t net_number = htonl(number);
-    buffer.insert(buffer.end(),
-                  reinterpret_cast<char*>(&net_number),
-                  reinterpret_cast<char*>(&net_number) + sizeof(int32_t));
-
-    // 2. 序列化 string 内容
-    buffer.insert(buffer.end(), str.begin(), str.end());
-
-    return buffer;
-}
+std::shared_ptr<iocp_socket::session> server_session = nullptr;
 
 static DWORD WINAPI recv_thread(LPVOID lpParam)
 {
     SOCKET sock = reinterpret_cast<SOCKET>(lpParam);
-    char buffer[4096];
+    char buffer[2048];
 
     while (true)
     {
-        int ret = recv(sock, buffer, sizeof(buffer) - 1, 0);
+        int ret = recv(sock, buffer, sizeof(buffer), 0);
+        // std::cout << "code : " <<  WSAGetLastError() << "\n";
+        // std::cout << "ret : " <<  ret << "\n";
 
         if (ret > 0)
         {
-            buffer[ret] = '\0';
             server_session->receive_from_buffer(buffer, ret, [&](const std::string& str)
             {
                 std::cout << str << "\n";
@@ -73,7 +59,7 @@ int main()
 {
     WSAContext ct;
 
-    SOCKET server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET server_socket = WSASocket(AF_INET, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -86,7 +72,7 @@ int main()
         return 1;
     }
 
-    server_session = std::make_shared<iocp_server::session>(server_socket);
+    server_session = std::make_shared<iocp_socket::session>(server_socket);
 
     // 启动接收线程
     const HANDLE rece_thread = CreateThread(nullptr, 0, recv_thread, (LPVOID)(server_socket), 0, nullptr);
@@ -106,7 +92,7 @@ int main()
         }
         std::cout << input << "\n";
 
-        auto data = serialize_data(sizeof(int32_t) + input.length(), input);
+        auto data = iocp_socket::package_handler::serialize_data(input);
 
         if (server_session->send_sync(data) == SOCKET_ERROR)
         {

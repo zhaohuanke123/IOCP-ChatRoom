@@ -3,7 +3,9 @@
 #include <thread>
 #include <sstream>
 
-namespace iocp_server
+#include "../../build/libs/net_lib/package_handler.h"
+
+namespace iocp_socket
 {
     server::server(const char* ip, u_short port)
         : m_listenSocket(INVALID_SOCKET), m_hIocp(nullptr), m_running(false)
@@ -151,9 +153,6 @@ namespace iocp_server
                 // 处理接收到的数据
                 if (bytesTransferred > 0)
                 {
-                    // std::cout << "Received: "
-                    //           << std::string(vOver->m_buf.buf, bytesTransferred)
-                    //           << std::endl;
                     std::cout << "Received: "
                         << bytesTransferred
                         << std::endl;
@@ -162,10 +161,17 @@ namespace iocp_server
 
                     fromSession->receive_from_buffer(v_over->m_btBuf, bytesTransferred, [&](const std::string& message)
                     {
+                        auto send_message = "客户端[" + std::to_string(fromSession->get_id()) + "] 说: " + message;
                         for (auto kv : m_activeConnections)
                         {
                             auto session = kv.second;
-                            session->send_async(message);
+                            if (session == fromSession)
+                            {
+                                continue;
+                            }
+
+                            auto stream = package_handler::serialize_data(send_message);
+                            session->send_async(stream.data(), stream.size());
                         }
                     });
                 }

@@ -11,7 +11,7 @@
 #pragma comment(lib, "Mswsock.lib")
 #include "io_event.hpp"
 
-namespace iocp_server
+namespace iocp_socket
 {
     class v_overlapped : public OVERLAPPED
     {
