@@ -8,9 +8,9 @@
 #include <sstream>
 #include <vector>
 
-#include "session.hpp"
-#include "WSAContext.hpp"
-#include "../../build/libs/net_lib/package_handler.h"
+#include <net_lib/session.hpp>
+#include <net_lib/WSAContext.hpp>
+#include <net_lib/package_handler.h>
 
 #pragma comment(lib, "Ws2_32.lib")
 

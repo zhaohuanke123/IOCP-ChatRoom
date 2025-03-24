@@ -1,9 +1,8 @@
-#include "Server.hpp"
+#include <net_lib/server.hpp>
+#include <net_lib/package_handler.h>
 #include <iostream>
 #include <thread>
 #include <sstream>
-
-#include "../../build/libs/net_lib/package_handler.h"
 
 namespace iocp_socket
 {
