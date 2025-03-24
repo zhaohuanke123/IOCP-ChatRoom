@@ -17,6 +17,7 @@ namespace iocp_socket
         ~server();
 
         void start();
+
         static void dispatcher(int mt, const std::string &message) {
             m_dispatcher.dispatch_message(mt, message);
         }

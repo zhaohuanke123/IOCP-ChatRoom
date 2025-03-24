@@ -7,7 +7,7 @@ namespace iocp_socket
 {
     package_dispatcher server::m_dispatcher;
 
-    server::server(const char* ip, u_short port)
+    server::server(const char *ip, u_short port)
         : m_listenSocket(INVALID_SOCKET), m_hIocp(nullptr), m_running(false)
     {
         // 初始化地址结构
@@ -18,13 +18,11 @@ namespace iocp_socket
         initialize_socket();
         setup_iocp();
 
-        m_dispatcher.register_message_handler(message_type::login, [](const std::string& mes)
-        {
-            std::cout << "Login message received" << std::endl;
-            login_message login = login_message::from_json(json::parse(mes));
-            std::cout << "Username: " << login.username << std::endl;
-            std::cout << "Password: " << login.password << std::endl;
-        });
+        m_dispatcher.register_message_handler<login_message>(
+            message_type::login, [](const login_message &login)
+            {
+        std::cout << "Username: " << login.username << std::endl;
+        std::cout << "Password: " << login.password << std::endl; });
     }
 
     server::~server()
@@ -51,7 +49,7 @@ namespace iocp_socket
         }
 
         // 绑定和监听
-        if (bind(m_listenSocket, (sockaddr*)&m_serverAddr, sizeof(m_serverAddr)) == SOCKET_ERROR)
+        if (bind(m_listenSocket, (sockaddr *)&m_serverAddr, sizeof(m_serverAddr)) == SOCKET_ERROR)
         {
             throw std::runtime_error("Bind failed");
         }
@@ -141,7 +139,7 @@ namespace iocp_socket
             // DWORD _error = WSAGetLastError();
             // std::cout << "error : " << _error << "\n";
 
-            const auto v_over = static_cast<v_overlapped*>(overlapped);
+            const auto v_over = static_cast<v_overlapped *>(overlapped);
 
             switch (v_over->m_event)
             {
@@ -162,13 +160,13 @@ namespace iocp_socket
                 if (bytesTransferred > 0)
                 {
                     std::cout << "Received: "
-                        << bytesTransferred
-                        << std::endl;
+                              << bytesTransferred
+                              << std::endl;
 
                     auto fromSession = m_activeConnections[v_over->m_sockClient];
 
-                    fromSession->receive_from_buffer(v_over->m_btBuf, bytesTransferred, [&](const std::string& message)
-                    {
+                    fromSession->receive_from_buffer(v_over->m_btBuf, bytesTransferred, [&](const std::string &message)
+                                                     {
                         auto send_message = "客户端[" + std::to_string(fromSession->get_id()) + "] 说: " + message;
                         for (auto kv : m_activeConnections)
                         {
@@ -180,8 +178,7 @@ namespace iocp_socket
 
                             auto stream = serialize_data(send_message);
                             session->send_async(stream.data(), stream.size());
-                        }
-                    });
+                        } });
                 }
                 else
                 {
@@ -190,21 +187,21 @@ namespace iocp_socket
                 }
                 post_recv(v_over->m_sockClient);
                 break;
-            default: ;
+            default:;
             }
             delete v_over;
         }
     }
 
-    void server::handle_dis_connect(v_overlapped* v_over, DWORD bytes_transferred)
+    void server::handle_dis_connect(v_overlapped *v_over, DWORD bytes_transferred)
     {
         SOCKET clientSocket = v_over ? v_over->m_sockClient : INVALID_SOCKET;
         auto session = m_activeConnections[clientSocket];
         DWORD error = v_over ? WSAGetLastError() : ERROR_INVALID_HANDLE;
 
         // 识别断开类型（关键判断）
-        if (error == WSAECONNRESET || // 连接重置
-            error == WSAEDISCON || // 优雅断开
+        if (error == WSAECONNRESET ||       // 连接重置
+            error == WSAEDISCON ||          // 优雅断开
             error == ERROR_NETNAME_DELETED) // 网络名称删除
         {
             std::cout << "客户端[" << session->get_id() << "] 异常断开, 错误码: " << error << std::endl;
