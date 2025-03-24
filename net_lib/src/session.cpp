@@ -2,34 +2,42 @@
 #include <functional>
 #include <sstream>
 #include <net_lib\session.hpp>
+#include <net_lib\message_type.hpp>
+#include <net_lib\server.hpp>
 
 namespace iocp_socket
 {
+    static const int LENGHTH_SIZE = sizeof(int32_t);
+    static const int HEADER_SIZE = LENGHTH_SIZE + sizeof(int32_t);
     void session::receive_from_buffer(const CHAR buffer[], const DWORD rece_length,
-                                      const std::function<void(std::string&)>& call_back)
+                                      const std::function<void(std::string &)> &call_back)
     {
         memcpy(ring_buffer + cur_size, buffer, rece_length);
         cur_size += rece_length;
         int offset = 0;
-        while (cur_size - offset >= sizeof(int32_t))
+        while (cur_size - offset >= HEADER_SIZE)
         {
             // 处理长度
-            int length = ntohl(*reinterpret_cast<const int32_t*>(ring_buffer + offset));
+            int length = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset));
             if (cur_size - offset < length)
             {
                 break;
             }
             std::cout << "Parsed length (from combined buffer): " << length << '\n';
 
-            // 处理一个包
-            std::ostringstream oss;
-            oss << std::string( ring_buffer + offset + 4, length - 4);
-            std::string sendStr = oss.str();
+            int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGHTH_SIZE));
+            message_type type = (message_type)mt;
+            server::dispatcher(type, std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
 
-            if (call_back != nullptr)
-            {
-                call_back(sendStr);
-            }
+            // 处理一个包
+            // std::ostringstream oss;
+            // oss << std::string( ring_buffer + offset + 4, length - 4);
+            // std::string sendStr = oss.str();
+
+            // if (call_back != nullptr)
+            // {
+            //     call_back(sendStr);
+            // }
 
             offset += length;
         };
@@ -55,7 +63,7 @@ namespace iocp_socket
         std::cout << "Session 销毁 : " << m_id << "\n";
     }
 
-    void session::send_async(const std::string& message) const
+    void session::send_async(const std::string &message) const
     {
         send_async(message.data(), message.size());
     }
@@ -76,7 +84,7 @@ namespace iocp_socket
         }
     }
 
-    int session::send_sync(const std::vector<char>& message) const
+    int session::send_sync(const std::vector<char> &message) const
     {
         int code = send(m_sock, message.data(), message.size(), 0);
         return code;

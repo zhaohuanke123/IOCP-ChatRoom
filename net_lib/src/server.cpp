@@ -1,11 +1,12 @@
 #include <net_lib/server.hpp>
-#include <net_lib/package_handler.h>
 #include <iostream>
 #include <thread>
 #include <sstream>
 
 namespace iocp_socket
 {
+    package_dispatcher server::m_dispatcher;
+
     server::server(const char* ip, u_short port)
         : m_listenSocket(INVALID_SOCKET), m_hIocp(nullptr), m_running(false)
     {
@@ -16,6 +17,14 @@ namespace iocp_socket
 
         initialize_socket();
         setup_iocp();
+
+        m_dispatcher.register_message_handler(message_type::login, [](const std::string& mes)
+        {
+            std::cout << "Login message received" << std::endl;
+            login_message login = login_message::from_json(json::parse(mes));
+            std::cout << "Username: " << login.username << std::endl;
+            std::cout << "Password: " << login.password << std::endl;
+        });
     }
 
     server::~server()
@@ -169,7 +178,7 @@ namespace iocp_socket
                                 continue;
                             }
 
-                            auto stream = package_handler::serialize_data(send_message);
+                            auto stream = serialize_data(send_message);
                             session->send_async(stream.data(), stream.size());
                         }
                     });

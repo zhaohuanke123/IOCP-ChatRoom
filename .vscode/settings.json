@@ -85,7 +85,10 @@
         "xutility": "cpp",
         "*.tcc": "cpp",
         "memory_resource": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "codecvt": "cpp",
+        "filesystem": "cpp",
+        "valarray": "cpp"
     },
     "marscode.chatLanguage": "cn"
 }

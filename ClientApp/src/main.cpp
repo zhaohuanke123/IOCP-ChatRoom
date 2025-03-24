@@ -10,7 +10,8 @@
 
 #include <net_lib/session.hpp>
 #include <net_lib/WSAContext.hpp>
-#include <net_lib/package_handler.h>
+#include <net_lib/package_handler.hpp>
+#include <net_lib/message_type.hpp>
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -29,10 +30,8 @@ static DWORD WINAPI recv_thread(LPVOID lpParam)
 
         if (ret > 0)
         {
-            server_session->receive_from_buffer(buffer, ret, [&](const std::string& str)
-            {
-                std::cout << str << "\n";
-            });
+            server_session->receive_from_buffer(buffer, ret, [&](const std::string &str)
+                                                { std::cout << str << "\n"; });
         }
         else if (ret == 0)
         {
@@ -65,7 +64,7 @@ int main()
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     serverAddr.sin_port = htons(9527);
 
-    if (connect(server_socket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    if (connect(server_socket, (sockaddr *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
     {
         std::cerr << "连接失败: " << WSAGetLastError() << '\n';
         closesocket(server_socket);
@@ -85,14 +84,28 @@ int main()
     std::string input;
     while (true)
     {
-        std::getline(std::cin, input);
-        if (input == "q")
-        {
-            break;
-        }
-        std::cout << input << "\n";
+        // 输入登录 账号 密码
+        std::string username;
+        std::string password;
+        std::cout << "请输入用户名: ";
+        std::cin >> username;
+        std::cout << "请输入密码: ";
+        std::cin >> password;
 
-        auto data = iocp_socket::package_handler::serialize_data(input);
+        iocp_socket::login_message login;
+        login.username = username;
+        login.password = password;
+
+        auto data = iocp_socket::serialize_data(iocp_socket::login, login.to_json());
+
+        // std::getline(std::cin, input);
+        // if (input == "q")
+        // {
+        //     break;
+        // }
+        // std::cout << input << "\n";
+
+        // auto data = iocp_socket::serialize_data(input);
 
         if (server_session->send_sync(data) == SOCKET_ERROR)
         {
