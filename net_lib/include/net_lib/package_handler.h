@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Server.hpp"
+#include <net_lib/Server.hpp>
 
 namespace iocp_socket
 {
