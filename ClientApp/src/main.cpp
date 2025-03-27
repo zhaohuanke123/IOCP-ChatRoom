@@ -14,6 +14,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 std::shared_ptr<iocp_socket::session> server_session = nullptr;
+iocp_socket::package_dispatcher dispatcher;
 
 static DWORD WINAPI recv_thread(LPVOID lpParam)
 {
@@ -64,11 +65,28 @@ void print_menu()
     std::cout << "3. 加入房间\n"; 
 }
 
+// 打印选中发送的用户功能
+void print_send_user()
+{
+    // 清理屏幕
+    system("cls");
+    std::cout << "选中序号发送消息给指定用户：\n"; 
+}
+
+void register_messageHandler ()
+{
+    dispatcher.register_message_handler<iocp_socket::get_room_list_message>(
+        iocp_socket::message_type::get_room_list, [](const std::shared_ptr<iocp_socket::session> &send_session, const iocp_socket::get_room_list_message &get_room_list)
+        {
+            std::cout << "get_room_list_message" << std::endl;
+        });
+}
 
 int main()
 {
     // WSA 初始化
     WSAContext ct;
+
 
     // 连接服务器socket
     SOCKET server_socket = WSASocket(AF_INET, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
