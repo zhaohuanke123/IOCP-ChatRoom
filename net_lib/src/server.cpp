@@ -3,6 +3,8 @@
 #include <thread>
 #include <sstream>
 
+#include "net_lib/package_handler.hpp"
+
 namespace iocp_socket
 {
     package_dispatcher server::m_dispatcher;
@@ -19,10 +21,14 @@ namespace iocp_socket
         setup_iocp();
 
         m_dispatcher.register_message_handler<login_message>(
-            message_type::login, [](const login_message &login)
+            message_type::login, [this](const std::shared_ptr<session> &send_session, const login_message &login)
             {
-        std::cout << "Username: " << login.username << std::endl;
-        std::cout << "Password: " << login.password << std::endl; });
+                // 登录成功，将用户添加到登录用户列表中， 把 name + ip + 端口号 作为 userName
+                std::stringstream ss;
+                ss << login.username << " " << send_session->get_remote_endpoint();
+                m_loginUsers.emplace(ss.str(),
+                                     std::make_shared<user>(login.username, send_session));
+                std::cout << ss.str() << " login" << std::endl; });
     }
 
     server::~server()
@@ -148,7 +154,10 @@ namespace iocp_socket
                 {
                     std::lock_guard<std::mutex> lock(m_connMutex);
                     std::cout << "新客户端连接: " << v_over->m_sockClient << std::endl;
-                    m_activeConnections.emplace(v_over->m_sockClient, std::make_shared<session>(v_over->m_sockClient));
+                    auto new_session = std::make_shared<session>(v_over->m_sockClient);
+                    // std::cout << new_session->get_remote_endpoint() << std::endl;
+                    m_activeConnections.emplace(v_over->m_sockClient, new_session);
+                    setsockopt(v_over->m_sockClient, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&m_listenSocket, sizeof(m_listenSocket));
                 }
                 CreateIoCompletionPort((HANDLE)v_over->m_sockClient, m_hIocp, 0, 0);
                 post_recv(v_over->m_sockClient);
@@ -165,20 +174,7 @@ namespace iocp_socket
 
                     auto fromSession = m_activeConnections[v_over->m_sockClient];
 
-                    fromSession->receive_from_buffer(v_over->m_btBuf, bytesTransferred, [&](const std::string &message)
-                                                     {
-                        auto send_message = "客户端[" + std::to_string(fromSession->get_id()) + "] 说: " + message;
-                        for (auto kv : m_activeConnections)
-                        {
-                            auto session = kv.second;
-                            if (session == fromSession)
-                            {
-                                continue;
-                            }
-
-                            auto stream = serialize_data(send_message);
-                            session->send_async(stream.data(), stream.size());
-                        } });
+                    receive_from_buffer(fromSession, v_over->m_btBuf, bytesTransferred);
                 }
                 else
                 {

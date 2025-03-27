@@ -1,11 +1,9 @@
 #include <iostream>
 #include <string>
-#include <atomic>
 #include <thread>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
-#include <sstream>
 #include <vector>
 
 #include <net_lib/session.hpp>
@@ -30,8 +28,7 @@ static DWORD WINAPI recv_thread(LPVOID lpParam)
 
         if (ret > 0)
         {
-            server_session->receive_from_buffer(buffer, ret, [&](const std::string &str)
-                                                { std::cout << str << "\n"; });
+            iocp_socket::receive_from_buffer(server_session, buffer, ret);
         }
         else if (ret == 0)
         {
@@ -54,10 +51,26 @@ static DWORD WINAPI recv_thread(LPVOID lpParam)
     return 0;
 }
 
+// 输出功能列表
+// 1. 发送消息给指定用户
+// 2. 创建房间
+// 3. 加入房间
+void print_menu()
+{
+    // 清理屏幕
+    system("cls");
+    std::cout << "1. 发送消息给指定用户\n";
+    std::cout << "2. 创建房间\n";
+    std::cout << "3. 加入房间\n"; 
+}
+
+
 int main()
 {
+    // WSA 初始化
     WSAContext ct;
 
+    // 连接服务器socket
     SOCKET server_socket = WSASocket(AF_INET, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
@@ -71,6 +84,7 @@ int main()
         return 1;
     }
 
+    // 后续使用session 接受和发送消息
     server_session = std::make_shared<iocp_socket::session>(server_socket);
 
     // 启动接收线程
@@ -82,36 +96,21 @@ int main()
     }
 
     std::string input;
+    std::cout << "请输入用户名: ";
+    std::cin >> input;
+    iocp_socket::login_message login;
+    login.username = input;
+    auto data = serialize_data(iocp_socket::login, login.to_json());
+    if (server_session->send_sync(data) == SOCKET_ERROR)
+    {
+        std::cerr << "发送失败: " << WSAGetLastError() << '\n';
+        return 1;
+    }
+
     while (true)
     {
-        // 输入登录 账号 密码
-        std::string username;
-        std::string password;
-        std::cout << "请输入用户名: ";
-        std::cin >> username;
-        std::cout << "请输入密码: ";
-        std::cin >> password;
-
-        iocp_socket::login_message login;
-        login.username = username;
-        login.password = password;
-
-        auto data = iocp_socket::serialize_data(iocp_socket::login, login.to_json());
-
-        // std::getline(std::cin, input);
-        // if (input == "q")
-        // {
-        //     break;
-        // }
-        // std::cout << input << "\n";
-
-        // auto data = iocp_socket::serialize_data(input);
-
-        if (server_session->send_sync(data) == SOCKET_ERROR)
-        {
-            std::cerr << "发送失败: " << WSAGetLastError() << '\n';
-            break;
-        }
+        print_menu();
+        std::cin >> input;
     }
 
     WaitForSingleObject(rece_thread, 2000);

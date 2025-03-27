@@ -7,52 +7,52 @@
 
 namespace iocp_socket
 {
-    static const int LENGHTH_SIZE = sizeof(int32_t);
-    static const int HEADER_SIZE = LENGHTH_SIZE + sizeof(int32_t);
-    void session::receive_from_buffer(const CHAR buffer[], const DWORD rece_length,
-                                      const std::function<void(std::string &)> &call_back)
-    {
-        memcpy(ring_buffer + cur_size, buffer, rece_length);
-        cur_size += rece_length;
-        int offset = 0;
-        while (cur_size - offset >= HEADER_SIZE)
-        {
-            // 处理长度
-            int length = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset));
-            if (cur_size - offset < length)
-            {
-                break;
-            }
-            std::cout << "Parsed length (from combined buffer): " << length << '\n';
 
-            int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGHTH_SIZE));
-            message_type type = (message_type)mt;
-            server::dispatcher(type, std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
 
-            // 处理一个包
-            // std::ostringstream oss;
-            // oss << std::string( ring_buffer + offset + 4, length - 4);
-            // std::string sendStr = oss.str();
-
-            // if (call_back != nullptr)
-            // {
-            //     call_back(sendStr);
-            // }
-
-            offset += length;
-        };
-
-        if (offset > 0)
-        {
-            if (cur_size - offset > 0)
-            {
-                memcpy(ring_buffer, ring_buffer + offset,
-                       cur_size - offset);
-            }
-
-            cur_size -= offset;
-        }
-    }
+    // void session::receive_from_buffer(v_overlapped *overlapped, const DWORD rece_length)
+    // {
+    //     const CHAR *buffer = overlapped->m_btBuf;
+    //     memcpy(ring_buffer + cur_size, buffer, rece_length);
+    //     cur_size += rece_length;
+    //     int offset = 0;
+    //     while (cur_size - offset >= HEADER_SIZE)
+    //     {
+    //         // 处理长度
+    //         int length = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset));
+    //         if (cur_size - offset < length)
+    //         {
+    //             break;
+    //         }
+    //         std::cout << "Parsed length (from combined buffer): " << length << '\n';
+    //
+    //         int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGHTH_SIZE));
+    //         message_type type = (message_type) mt;
+    //         server::dispatcher(this, type, std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
+    //
+    //         // 处理一个包
+    //         // std::ostringstream oss;
+    //         // oss << std::string( ring_buffer + offset + 4, length - 4);
+    //         // std::string sendStr = oss.str();
+    //
+    //         // if (call_back != nullptr)
+    //         // {
+    //         //     call_back(sendStr);
+    //         // }
+    //
+    //         offset += length;
+    //     };
+    //
+    //     if (offset > 0)
+    //     {
+    //         if (cur_size - offset > 0)
+    //         {
+    //             memcpy(ring_buffer, ring_buffer + offset,
+    //                    cur_size - offset);
+    //         }
+    //
+    //         cur_size -= offset;
+    //     }
+    // }
 
     session::~session()
     {

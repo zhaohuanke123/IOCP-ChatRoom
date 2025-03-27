@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <net_lib/Server.hpp>
+#include <net_lib/server.hpp>
 #include <net_lib/message_type.hpp>
 
 namespace iocp_socket
@@ -47,5 +47,56 @@ namespace iocp_socket
 
         return buffer;
     }
+
+    static constexpr int LENGTH_SIZE = sizeof(int32_t);
+    static constexpr int HEADER_SIZE = LENGTH_SIZE + sizeof(int32_t);
+
+    static void receive_from_buffer(const shared_ptr<session> &sendSession,const CHAR *buffer, const DWORD rece_length)
+    {
+        char *ring_buffer = sendSession->ring_buffer;
+        int &cur_size = sendSession->cur_size;
+        memcpy(ring_buffer + cur_size, buffer, rece_length);
+        cur_size += rece_length;
+        int offset = 0;
+        while (cur_size - offset >= HEADER_SIZE)
+        {
+            // 处理长度
+            int length = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset));
+            if (cur_size - offset < length)
+            {
+                break;
+            }
+            std::cout << "Parsed length (from combined buffer): " << length << '\n';
+
+            int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGTH_SIZE));
+            auto type = (message_type) mt;
+            server::dispatcher(sendSession, type,
+                               std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
+
+            // 处理一个包
+            // std::ostringstream oss;
+            // oss << std::string( ring_buffer + offset + 4, length - 4);
+            // std::string sendStr = oss.str();
+
+            // if (call_back != nullptr)
+            // {
+            //     call_back(sendStr);
+            // }
+
+            offset += length;
+        };
+
+        if (offset > 0)
+        {
+            if (cur_size - offset > 0)
+            {
+                memcpy(ring_buffer, ring_buffer + offset,
+                       cur_size - offset);
+            }
+
+            cur_size -= offset;
+        }
+    }
+
     // };
 }
