@@ -16,6 +16,8 @@ namespace iocp_socket
       message,
       leave_room,
       message_count,
+      get_users_request,
+      get_users_response,
    };
 
    struct login_message
@@ -102,6 +104,37 @@ namespace iocp_socket
          message p;
          p.sender = j.at("sender").get<std::string>();
          p.content = j.at("content").get<std::string>();
+         return p;
+      }
+   };
+
+   struct get_users_request_message
+   {
+      json to_json() const
+      {
+         return json{};
+      }
+
+      static get_users_request_message from_json(const json &j)
+      {
+         get_users_request_message p;
+         return p;
+      }
+   };
+
+   struct  get_users_response_message
+   {
+      std::vector<std::string> user_list;
+
+      json to_json() const
+      {
+         return json{{"user_list", user_list}};
+      }
+
+      static get_users_response_message from_json(const json &j)
+      {
+         get_users_response_message p;
+         p.user_list = j.at("user_list").get<std::vector<std::string>>();
          return p;
       }
    };

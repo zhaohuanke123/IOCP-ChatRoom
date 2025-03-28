@@ -1,10 +1,10 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <vector>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <winsock2.h>
-#include <vector>
 
 #include <net_lib/session.hpp>
 #include <net_lib/WSAContext.hpp>
@@ -15,6 +15,9 @@
 
 std::shared_ptr<iocp_socket::session> server_session = nullptr;
 iocp_socket::package_dispatcher dispatcher;
+// 一个等待 用户列表的事件
+HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+iocp_socket::get_users_response_message user_list;
 
 static DWORD WINAPI recv_thread(LPVOID lpParam)
 {
@@ -29,7 +32,7 @@ static DWORD WINAPI recv_thread(LPVOID lpParam)
 
         if (ret > 0)
         {
-            iocp_socket::receive_from_buffer(server_session, buffer, ret);
+            iocp_socket::receive_from_buffer(server_session, buffer, ret, dispatcher);
         }
         else if (ret == 0)
         {
@@ -62,7 +65,7 @@ void print_menu()
     system("cls");
     std::cout << "1. 发送消息给指定用户\n";
     std::cout << "2. 创建房间\n";
-    std::cout << "3. 加入房间\n"; 
+    std::cout << "3. 加入房间\n";
 }
 
 // 打印选中发送的用户功能
@@ -70,23 +73,22 @@ void print_send_user()
 {
     // 清理屏幕
     system("cls");
-    std::cout << "选中序号发送消息给指定用户：\n"; 
+    std::cout << "选中序号发送消息给指定用户：\n";
 }
 
-void register_messageHandler ()
+void register_messageHandler()
 {
-    dispatcher.register_message_handler<iocp_socket::get_room_list_message>(
-        iocp_socket::message_type::get_room_list, [](const std::shared_ptr<iocp_socket::session> &send_session, const iocp_socket::get_room_list_message &get_room_list)
+    dispatcher.register_message_handler<iocp_socket::get_users_response_message>(
+        iocp_socket::message_type::get_room_list, [](const std::shared_ptr<iocp_socket::session> &send_session, const iocp_socket::get_users_response_message &get_users)
         {
-            std::cout << "get_room_list_message" << std::endl;
-        });
+            user_list = get_users;
+            SetEvent(hEvent); });
 }
 
 int main()
 {
     // WSA 初始化
     WSAContext ct;
-
 
     // 连接服务器socket
     SOCKET server_socket = WSASocket(AF_INET, SOCK_STREAM, 0, nullptr, 0, WSA_FLAG_OVERLAPPED);
@@ -129,8 +131,27 @@ int main()
     {
         print_menu();
         std::cin >> input;
-    }
+        switch (input[0])
+        {
+        case '1':
+        {
+            server_session->send_sync(iocp_socket::serialize_data(iocp_socket::get_users_request, ""));
+            print_send_user();
+            // 等待用户列表
+            WaitForSingleObject(hEvent, INFINITE);
+            // ResetEvent(hEvent);
 
-    WaitForSingleObject(rece_thread, 2000);
-    return 0;
+            for (int i = 0; i < user_list.user_list.size(); i++)
+            {
+                std::cout << i << ". " << user_list.user_list[i] << "\n";
+            }
+        }
+        break;
+        default:
+            break;
+        }
+
+        WaitForSingleObject(rece_thread, 2000);
+        return 0;
+    }
 }

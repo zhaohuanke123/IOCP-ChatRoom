@@ -52,6 +52,10 @@ namespace iocp_socket
 
         void send_async(const std::string &message) const;
 
+        void send_async(const char *message) const;
+
+        void send_async(const std::vector<char> message) const;
+
         void session::send_async(const char stream[], const size_t length) const;
 
         int send_sync(const std::vector<char> &message) const;

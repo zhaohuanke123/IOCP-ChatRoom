@@ -29,6 +29,17 @@ namespace iocp_socket
                 m_loginUsers.emplace(ss.str(),
                                      std::make_shared<user>(login.username, send_session));
                 std::cout << ss.str() << " login" << std::endl; });
+
+        m_dispatcher.register_message_handler<get_users_request_message>(
+            message_type::get_users_request, [this](const std::shared_ptr<session> &send_session, const get_users_request_message &get_users)
+            {
+                    // 发送用户列表给请求者
+                    get_users_response_message response;
+                    for (const auto &user : m_loginUsers)
+                    {
+                        response.user_list.push_back(user.first);
+                    }
+                    send_session->send_async(serialize_data(get_users_response, response.to_json())); });
     }
 
     server::~server()
@@ -174,7 +185,7 @@ namespace iocp_socket
 
                     auto fromSession = m_activeConnections[v_over->m_sockClient];
 
-                    receive_from_buffer(fromSession, v_over->m_btBuf, bytesTransferred);
+                    receive_from_buffer(fromSession, v_over->m_btBuf, bytesTransferred, m_dispatcher);
                 }
                 else
                 {

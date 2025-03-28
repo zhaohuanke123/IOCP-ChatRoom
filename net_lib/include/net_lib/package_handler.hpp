@@ -51,7 +51,7 @@ namespace iocp_socket
     static constexpr int LENGTH_SIZE = sizeof(int32_t);
     static constexpr int HEADER_SIZE = LENGTH_SIZE + sizeof(int32_t);
 
-    static void receive_from_buffer(const shared_ptr<session> &sendSession,const CHAR *buffer, const DWORD rece_length)
+    static void receive_from_buffer(const shared_ptr<session> &sendSession, const CHAR *buffer, const DWORD rece_length, package_dispatcher dispatcher)
     {
         char *ring_buffer = sendSession->ring_buffer;
         int &cur_size = sendSession->cur_size;
@@ -69,19 +69,8 @@ namespace iocp_socket
             std::cout << "Parsed length (from combined buffer): " << length << '\n';
 
             int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGTH_SIZE));
-            auto type = (message_type) mt;
-            server::dispatcher(sendSession, type,
-                               std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
-
-            // 处理一个包
-            // std::ostringstream oss;
-            // oss << std::string( ring_buffer + offset + 4, length - 4);
-            // std::string sendStr = oss.str();
-
-            // if (call_back != nullptr)
-            // {
-            //     call_back(sendStr);
-            // }
+            auto type = (message_type)mt;
+            dispatcher.dispatch_message(sendSession, type, std::string(ring_buffer + offset + HEADER_SIZE, length - HEADER_SIZE));
 
             offset += length;
         };
