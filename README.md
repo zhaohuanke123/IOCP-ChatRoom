@@ -1,6 +1,8 @@
 # IOCP-ChatRoom
 基于IOCP 的 控制台聊天室
 
+## 项目结构
+```plaintext
 ├── ClientApp/                # 客户端应用程序
 ├── ServerApp/                # 服务器端应用程序
 │   ├── include/Server/       # 服务端头文件
@@ -30,3 +32,4 @@
 ├── demo_app/                 # 示例应用
 ├── CMakeLists.txt            # 主构建配置
 └── README.md                 # 项目说明文档
+```
