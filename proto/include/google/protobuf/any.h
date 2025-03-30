@@ -59,7 +59,7 @@ PROTOBUF_EXPORT bool InternalIsLite(absl::string_view type_name,
                                     absl::string_view type_url);
 
 // Packs a message using the default type URL prefix: "type.googleapis.com".
-// The resulted type URL will be "type.googleapis.com/<message_full_name>".
+// The resulted type URL will be "type.googleapis.commessage_full_name>".
 // Returns false if serializing the message failed.
 template <typename T>
 bool InternalPackFrom(const T& message, URL_TYPE* dst_url,
@@ -75,7 +75,7 @@ PROTOBUF_EXPORT bool InternalPackFrom(const Message& message, URL_TYPE* dst_url,
 // with an optional "/" separator if the prefix doesn't already end with "/".
 // For example, both InternalPackFrom(message, "type.googleapis.com") and
 // InternalPackFrom(message, "type.googleapis.com/") yield the same result type
-// URL: "type.googleapis.com/<message_full_name>".
+// URL: "type.googleapis.commessage_full_name>".
 // Returns false if serializing the message failed.
 template <typename T>
 bool InternalPackFrom(const T& message, absl::string_view type_url_prefix,

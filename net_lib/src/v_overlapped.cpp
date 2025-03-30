@@ -3,7 +3,7 @@
 
 namespace iocp_socket
 {
-    v_overlapped::v_overlapped(SOCKET sock, IO_EVENT event)
+    v_overlapped::v_overlapped(SOCKET sock, io_event event)
     {
         memset(this, 0, sizeof(v_overlapped));
         m_sockClient = sock;

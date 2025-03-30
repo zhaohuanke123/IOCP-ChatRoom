@@ -2871,16 +2871,16 @@ value with the default value for a given type
 */
 enum class value_t : std::uint8_t
 {
-    null,             ///< null value
-    object,           ///< object (unordered set of name/value pairs)
-    array,            ///< array (ordered collection of values)
-    string,           ///< string value
-    boolean,          ///< boolean value
-    number_integer,   ///< number value (signed integer)
-    number_unsigned,  ///< number value (unsigned integer)
-    number_float,     ///< number value (floating-point)
-    binary,           ///< binary array (ordered collection of bytes)
-    discarded         ///< discarded by the parser callback function
+    null,             // null value
+    object,           // object (unordered set of name/value pairs)
+    array,            // array (ordered collection of values)
+    string,           // string value
+    boolean,          // boolean value
+    number_integer,   // number value (signed integer)
+    number_unsigned,  // number value (unsigned integer)
+    number_float,     // number value (floating-point)
+    binary,           // binary array (ordered collection of bytes)
+    discarded         // discarded by the parser callback function
 };
 
 /*!
@@ -7409,23 +7409,23 @@ class lexer_base
     /// token types for the parser
     enum class token_type
     {
-        uninitialized,    ///< indicating the scanner is uninitialized
-        literal_true,     ///< the `true` literal
-        literal_false,    ///< the `false` literal
-        literal_null,     ///< the `null` literal
-        value_string,     ///< a string -- use get_string() for actual value
-        value_unsigned,   ///< an unsigned integer -- use get_number_unsigned() for actual value
-        value_integer,    ///< a signed integer -- use get_number_integer() for actual value
-        value_float,      ///< an floating point number -- use get_number_float() for actual value
-        begin_array,      ///< the character for array begin `[`
-        begin_object,     ///< the character for object begin `{`
-        end_array,        ///< the character for array end `]`
-        end_object,       ///< the character for object end `}`
-        name_separator,   ///< the name separator `:`
-        value_separator,  ///< the value separator `,`
-        parse_error,      ///< indicating a parse error
-        end_of_input,     ///< indicating the end of the input buffer
-        literal_or_value  ///< a literal or the begin of a value (only for diagnostics)
+        uninitialized,    // indicating the scanner is uninitialized
+        literal_true,     // the `true` literal
+        literal_false,    // the `false` literal
+        literal_null,     // the `null` literal
+        value_string,     // a string -- use get_string() for actual value
+        value_unsigned,   // an unsigned integer -- use get_number_unsigned() for actual value
+        value_integer,    // a signed integer -- use get_number_integer() for actual value
+        value_float,      // an floating point number -- use get_number_float() for actual value
+        begin_array,      // the character for array begin `[`
+        begin_object,     // the character for object begin `{`
+        end_array,        // the character for array end `]`
+        end_object,       // the character for object end `}`
+        name_separator,   // the name separator `:`
+        value_separator,  // the value separator `,`
+        parse_error,      // indicating a parse error
+        end_of_input,     // indicating the end of the input buffer
+        literal_or_value  // a literal or the begin of a value (only for diagnostics)
     };
 
     /// return name of values of type token_type (only used for errors)
@@ -9183,9 +9183,9 @@ namespace detail
 /// how to treat CBOR tags
 enum class cbor_tag_handler_t
 {
-    error,   ///< throw a parse_error exception in case of a tag
-    ignore,  ///< ignore tags
-    store    ///< store tags as binary type
+    error,   // throw a parse_error exception in case of a tag
+    ignore,  // ignore tags
+    store    // store tags as binary type
 };
 
 /*!
@@ -18050,9 +18050,9 @@ namespace detail
 /// how to treat decoding errors
 enum class error_handler_t
 {
-    strict,  ///< throw a type_error exception in case of invalid UTF-8
-    replace, ///< replace invalid UTF-8 sequences with U+FFFD
-    ignore   ///< ignore invalid UTF-8 sequences
+    strict,  // throw a type_error exception in case of invalid UTF-8
+    replace, // replace invalid UTF-8 sequences with U+FFFD
+    ignore   // ignore invalid UTF-8 sequences
 };
 
 template<typename BasicJsonType>

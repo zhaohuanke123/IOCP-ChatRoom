@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.lua.txt": "lua",
         "iostream": "cpp",
         "algorithm": "cpp",
         "any": "cpp",
@@ -88,7 +89,8 @@
         "string_view": "cpp",
         "codecvt": "cpp",
         "filesystem": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "shared_mutex": "cpp"
     },
     "marscode.chatLanguage": "cn",
 }

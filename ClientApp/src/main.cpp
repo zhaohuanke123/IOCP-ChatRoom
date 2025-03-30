@@ -18,6 +18,7 @@ iocp_socket::package_dispatcher dispatcher;
 // 一个等待 用户列表的事件
 HANDLE hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 std::vector<std::string> user_list;
+std::vector<std::string> room_list;  // 添加房间列表
 
 static DWORD WINAPI recv_thread(LPVOID lpParam) {
   SOCKET sock = reinterpret_cast<SOCKET>(lpParam);
@@ -66,7 +67,7 @@ void print_send_user() {
 }
 
 void register_messageHandler() {
-    // 注册message_type::get_user_response处理程序
+  // 注册message_type::get_user_response处理程序
   dispatcher.register_message_handler<iocp_socket::get_users_response>(
       iocp_socket::message_type::get_users_response,
       [](const std::shared_ptr<iocp_socket::session> &send_session,
@@ -75,13 +76,24 @@ void register_messageHandler() {
         SetEvent(hEvent);
       });
 
-    // 注册message_type::message处理程序
+  // 注册message_type::message处理程序
   dispatcher.register_message_handler<iocp_socket::message>(
       iocp_socket::message_type::message,
       [](const std::shared_ptr<iocp_socket::session> &send_session,
          const iocp_socket::message &msg) {
-        std::cout << "收到来自 " <<  msg.sender << " 的消息：\n"
-         "  消息：" << msg.content << "\n";
+        std::cout << "收到来自 " << msg.sender
+                  << " 的消息：\n"
+                     "  消息："
+                  << msg.content << "\n";
+      });
+
+  // 注册message_type::get_rooms_response处理程序
+  dispatcher.register_message_handler<iocp_socket::get_rooms_response>(
+      iocp_socket::message_type::get_rooms_response,
+      [](const std::shared_ptr<iocp_socket::session> &send_session,
+         const iocp_socket::get_rooms_response &get_rooms) {
+        room_list = std::move(get_rooms.room_list);
+        SetEvent(hEvent);
       });
 }
 
@@ -121,7 +133,7 @@ int main() {
   std::cin >> input;
   iocp_socket::login_message login;
   login.username = input;
-  auto data = serialize_data(iocp_socket::message_type::login, login.to_json());
+  auto data = iocp_socket::serialize_data(iocp_socket::message_type::login, login.to_json());
   if (server_session->send_sync(data) == SOCKET_ERROR) {
     std::cerr << "发送失败: " << WSAGetLastError() << '\n';
     return 1;
@@ -154,6 +166,7 @@ int main() {
               iocp_socket::send_message message;
               message.content = std::move(input);
               message.receiver = user_list[number];
+              message.type = iocp_socket::send_message_type::someone;
               server_session->send_sync(iocp_socket::message_type::send_message,
                                         message);
             } else {
@@ -170,6 +183,57 @@ int main() {
         create_room.room_name = input;
         server_session->send_sync(iocp_socket::message_type::create_room,
                                   create_room);
+      } break;
+      case '3': {
+        server_session->send_sync(iocp_socket::serialize_data(
+            iocp_socket::message_type::get_rooms_request, ""));
+
+        WaitForSingleObject(hEvent, INFINITE);
+
+        // 显示房间列表
+        std::cout << "可用房间列表:\n";
+        for (int i = 0; i < room_list.size(); i++) {
+          std::cout << i << ". " << room_list[i] << "\n";
+        }
+
+        // 让用户选择房间
+        std::cout << "请输入要加入的房间编号: ";
+        std::cin >> input;
+        int room_number = atoi(input.c_str());
+
+        if (room_number >= 0 && room_number < room_list.size()) {
+          // 发送加入房间请求
+          iocp_socket::enter_room enter_room_msg;
+          enter_room_msg.room_name = room_list[room_number];
+          server_session->send_sync(iocp_socket::message_type::enter_room,
+                                    enter_room_msg);
+          std::cout << "已发送加入房间请求\n";
+
+          while (true) {
+            std::cout << "请输入要发送的消息（输入q退出房间）：\n";
+            std::cin >> input;
+            if (input == "q") {
+              // 发送退出房间请求
+              iocp_socket::leave_room leave_room_msg;
+              leave_room_msg.room_name = room_list[room_number];
+              server_session->send_sync(iocp_socket::message_type::leave_room,
+                                        leave_room_msg);
+              break;
+            }
+
+            // 创建房间消息
+            iocp_socket::send_message room_msg;
+            room_msg.content = input;
+            room_msg.receiver = room_list[room_number];  // 将房间名作为接收者
+            room_msg.type = iocp_socket::send_message_type::room;
+            server_session->send_sync(iocp_socket::message_type::send_message,
+                                      room_msg);
+          }
+
+        } else {
+          std::cout << "无效的房间编号\n";
+        }
+
       } break;
       default:
         break;

@@ -18,7 +18,6 @@ void session::send_async(const std::string &message) const {
 }
 
 
-
 void session::send_async(const char *message) const {
   send_async(message, strlen(message));
 }
@@ -46,10 +45,9 @@ int session::send_sync(const std::vector<char> &message) const {
   return code;
 }
 
-
-
 int session::generate_id() noexcept {
-  static std::atomic<int> counter(0);  // 静态原子计数器
+  // 静态原子计数器
+  static std::atomic<int> counter(0);  
   return counter.fetch_add(1, std::memory_order_relaxed);
 }
 }  // namespace iocp_socket
