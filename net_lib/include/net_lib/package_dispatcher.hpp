@@ -53,15 +53,20 @@ class package_dispatcher {
       }
       case message_type::get_users_request: {
         auto _message =
-            get_users_request_message::from_json(json::parse(message));
+            get_users_request::from_json(json::parse(message));
         safeInvoke(handler, send_session, _message);
         break;
       }
       case message_type::get_users_response: {
         auto _message =
-            get_users_response_message::from_json(json::parse(message));
+            get_users_response::from_json(json::parse(message));
         safeInvoke(handler, send_session, _message);
         break;
+      }
+      case message_type::create_room: {
+        auto _message = create_room::from_json(json::parse(message));
+        safeInvoke(handler, send_session, _message);
+        break; 
       }
     }
   }

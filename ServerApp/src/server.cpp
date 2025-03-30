@@ -1,9 +1,8 @@
+#include <Server/server.hpp>
 #include <iostream>
-#include <net_lib/server.hpp>
+#include <net_lib/package_handler.hpp>
 #include <sstream>
 #include <thread>
-
-#include "net_lib/package_handler.hpp"
 
 namespace iocp_socket {
 package_dispatcher server::m_dispatcher;
@@ -18,6 +17,7 @@ server::server(const char *ip, u_short port)
   initialize_socket();
   setup_iocp();
 
+  // 注册登录消息处理器
   m_dispatcher.register_message_handler<login_message>(
       message_type::login, [this](const std::shared_ptr<session> &send_session,
                                   const login_message &login) {
@@ -25,16 +25,20 @@ server::server(const char *ip, u_short port)
         // userName
         std::stringstream ss;
         ss << login.username << " " << send_session->get_remote_endpoint();
-        m_loginUsers.emplace(
-            ss.str(), std::make_shared<user>(login.username, send_session));
+
+        m_loginUsers[ss.str()] =
+            std::make_shared<user>(login.username, send_session);
+        m_socket2Name[send_session->get_socket()] = ss.str();
         std::cout << ss.str() << " login" << std::endl;
       });
 
-  m_dispatcher.register_message_handler<get_users_request_message>(
+
+      // 注册用户列表请求消息处理器
+  m_dispatcher.register_message_handler<get_users_request>(
       message_type::get_users_request,
       [this](const std::shared_ptr<session> &send_session,
-             const get_users_request_message &get_users) {
-        get_users_response_message response;
+             const get_users_request &msg) {
+        get_users_response response;
         for (const auto &user : m_loginUsers) {
           response.user_list.push_back(user.first);
         }
@@ -42,17 +46,19 @@ server::server(const char *ip, u_short port)
             message_type::get_users_response, response.to_json()));
       });
 
+      // 注册发送消息处理器
   m_dispatcher.register_message_handler<send_message>(
       message_type::send_message,
       [this](const std::shared_ptr<session> &send_session,
-             const send_message &send) {
+             const send_message &msg) {
         // 查找接收者的session
-        auto it = m_loginUsers.find(send.receiver);
+        auto it = m_loginUsers.find(msg.receiver);
         if (it != m_loginUsers.end()) {
           // 发送消息给接收者
           message send_ms;
-          send_ms.content = std::move(send.content);
-          send_ms.sender = send_session->get_remote_endpoint();
+          send_ms.content = std::move(msg.content);
+          auto name = m_socket2Name[send_session->get_socket()];
+          send_ms.sender = std::move(name);
           it->second->send_message(message_type::message, send_ms);
         }
       });
@@ -166,8 +172,9 @@ void server::worker_thread() {
           std::lock_guard<std::mutex> lock(m_connMutex);
           std::cout << "新客户端连接: " << v_over->m_sockClient << std::endl;
           auto new_session = std::make_shared<session>(v_over->m_sockClient);
-          // std::cout << new_session->get_remote_endpoint() << std::endl;
           m_activeConnections.emplace(v_over->m_sockClient, new_session);
+
+          // 关联新socket到监听socket
           setsockopt(v_over->m_sockClient, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                      (char *)&m_listenSocket, sizeof(m_listenSocket));
         }
@@ -215,11 +222,21 @@ void server::handle_dis_connect(v_overlapped *v_over, DWORD bytes_transferred) {
     std::cout << "客户端[" << session->get_id()
               << "] 异常断开, 错误码: " << error << std::endl;
     m_activeConnections.erase(clientSocket);
+    auto &name = m_socket2Name[clientSocket];
+    if (!name.empty()) {
+      m_loginUsers.erase(name);
+      m_socket2Name.erase(clientSocket);
+    }
   } else if (v_over && bytes_transferred == 0)  // 正常关闭
   {
     std::cout << "客户端[" << session->get_id() << "] 主动断开连接"
               << std::endl;
     m_activeConnections.erase(clientSocket);
+    auto &name = m_socket2Name[clientSocket];
+    if (!name.empty()) {
+      m_loginUsers.erase(name);
+      m_socket2Name.erase(clientSocket);
+    }
   }
 
   if (v_over) {

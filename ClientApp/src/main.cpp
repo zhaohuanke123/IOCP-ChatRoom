@@ -26,7 +26,7 @@ static DWORD WINAPI recv_thread(LPVOID lpParam) {
   while (true) {
     int ret = recv(sock, buffer, sizeof(buffer), 0);
     // std::cout << "code : " <<  WSAGetLastError() << "\n";
-    std::cout << "received byte : " << ret << "\n";
+    // std::cout << "received byte : " << ret << "\n";
 
     if (ret > 0) {
       iocp_socket::receive_from_buffer(server_session, buffer, ret, dispatcher);
@@ -67,10 +67,10 @@ void print_send_user() {
 
 void register_messageHandler() {
     // 注册message_type::get_user_response处理程序
-  dispatcher.register_message_handler<iocp_socket::get_users_response_message>(
+  dispatcher.register_message_handler<iocp_socket::get_users_response>(
       iocp_socket::message_type::get_users_response,
       [](const std::shared_ptr<iocp_socket::session> &send_session,
-         const iocp_socket::get_users_response_message &get_users) {
+         const iocp_socket::get_users_response &get_users) {
         user_list = std::move(get_users.user_list);
         SetEvent(hEvent);
       });
@@ -135,9 +135,8 @@ int main() {
         server_session->send_sync(iocp_socket::serialize_data(
             iocp_socket::message_type::get_users_request, ""));
         print_send_user();
-        // 等待用户列表
+        // 等待服务器用户列表
         WaitForSingleObject(hEvent, INFINITE);
-        // ResetEvent(hEvent);
 
         for (int i = 0; i < user_list.size(); i++) {
           std::cout << i << ". " << user_list[i] << "\n";
@@ -163,6 +162,14 @@ int main() {
           }
         }
 
+      } break;
+      case '2': {
+        std::cout << "请输入房间名: ";
+        std::cin >> input;
+        iocp_socket::create_room create_room;
+        create_room.room_name = input;
+        server_session->send_sync(iocp_socket::message_type::create_room,
+                                  create_room);
       } break;
       default:
         break;

@@ -72,7 +72,7 @@ namespace iocp_socket
             {
                 break;
             }
-            std::cout << "Parsed length (from combined buffer): " << length << '\n';
+            // std::cout << "Parsed length (from combined buffer): " << length << '\n';
 
             int mt = ntohl(*reinterpret_cast<const int32_t *>(ring_buffer + offset + LENGTH_SIZE));
             auto type = (message_type)mt;

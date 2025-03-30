@@ -31,6 +31,8 @@ class session {
         m_id(other.m_id)  // 移动后保留原ID
   {}
 
+  SOCKET get_socket() const { return m_sock; }
+
   [[nodiscard]] std::string session::get_remote_endpoint() const {
     sockaddr_in sa;
     int len = sizeof(sa);
