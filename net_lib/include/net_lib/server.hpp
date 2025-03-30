@@ -3,11 +3,12 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <utility>
 #include <net_lib/v_overlapped.hpp>
 #include <net_lib/Session.hpp>
 #include <net_lib/package_dispatcher.hpp>
-#include <utility>
 #include <net_lib/user.hpp>
+#include <net_lib/message_type.hpp>
 
 namespace iocp_socket
 {
@@ -20,9 +21,9 @@ namespace iocp_socket
 
         void start();
 
-        static void dispatcher(std::shared_ptr<session> session, int mt, const std::string &message)
+        static void dispatcher(std::shared_ptr<session> session, message_type mt, const std::string &msg)
         {
-            m_dispatcher.dispatch_message(std::move(session), mt, message);
+            m_dispatcher.dispatch_message(std::move(session), mt, msg);
         }
 
         static server *get_instance()

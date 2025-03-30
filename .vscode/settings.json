@@ -90,5 +90,5 @@
         "filesystem": "cpp",
         "valarray": "cpp"
     },
-    "marscode.chatLanguage": "cn"
+    "marscode.chatLanguage": "cn",
 }

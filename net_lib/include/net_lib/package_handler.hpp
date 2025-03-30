@@ -1,29 +1,35 @@
 ﻿#pragma once
-#include <net_lib/server.hpp>
+// #include <net_lib/server.hpp>
 #include <net_lib/message_type.hpp>
+#include <net_lib/session.hpp>
+#include <net_lib/package_dispatcher.hpp>
+#include <memory>
 
 namespace iocp_socket
 {
     // class package_handler
     // {
     // public:
-    static std::vector<char> serialize_data(const std::string &message)
-    {
-        std::vector<char> buffer;
-        int32_t length = message.length() + 4;
+    // static std::vector<char> serialize_data(const std::string &message)
+    // {
+    //     std::vector<char> buffer;
+    //     int32_t length = message.length() + 4;
 
-        // 1. 序列化 int32 (转换为网络字节序)
-        int32_t net_length = htonl(length);
-        buffer.insert(buffer.end(),
-                      reinterpret_cast<char *>(&net_length),
-                      reinterpret_cast<char *>(&net_length) + sizeof(int32_t));
+    //     // 1. 序列化 int32 (转换为网络字节序)
+    //     int32_t net_length = htonl(length);
+    //     buffer.insert(buffer.end(),
+    //                   reinterpret_cast<char *>(&net_length),
+    //                   reinterpret_cast<char *>(&net_length) + sizeof(int32_t));
 
-        // 2. 序列化 string 内容
-        buffer.insert(buffer.end(), message.begin(), message.end());
+    //     // 2. 序列化 string 内容
+    //     buffer.insert(buffer.end(), message.begin(), message.end());
 
-        return buffer;
-    }
+    //     return buffer;
+    // }
 
+    /*
+    ** 序列化协议
+    */
     static std::vector<char> serialize_data(message_type mt, const json &message)
     {
         std::vector<char> buffer;
@@ -51,7 +57,7 @@ namespace iocp_socket
     static constexpr int LENGTH_SIZE = sizeof(int32_t);
     static constexpr int HEADER_SIZE = LENGTH_SIZE + sizeof(int32_t);
 
-    static void receive_from_buffer(const shared_ptr<session> &sendSession, const CHAR *buffer, const DWORD rece_length, package_dispatcher dispatcher)
+    static void receive_from_buffer(const std::shared_ptr<session> &sendSession, const CHAR *buffer, const DWORD rece_length, package_dispatcher dispatcher)
     {
         char *ring_buffer = sendSession->ring_buffer;
         int &cur_size = sendSession->cur_size;
