@@ -13,14 +13,14 @@
 │       ├── main.cpp          # 服务端入口
 │       ├── room.cpp          # 房间管理实现
 │       ├── server.cpp        # 服务器逻辑实现
-│       └── user.cpp          # 用户行为实现
+│       └── user.cpp          # 用户实体类
 ├── net_lib/                  # 网络通信核心库
 │   ├── include/net_lib/      # 公共头文件
-│   │   ├── io_event.hpp      # IO事件处理
+│   │   ├── io_event.hpp      # IO事件枚举
 │   │   ├── json.hpp          # JSON序列化
-│   │   ├── message_type.hpp  # 消息类型枚举
+│   │   ├── message_type.hpp  # 消息类型枚举和消息定义
 │   │   ├── package_dispatcher.hpp  # 数据包分发器
-│   │   ├── package_handler.hpp     # 数据包处理器
+│   │   ├── package_handler.hpp     # 数据包处理器，处理TCP粘包分包
 │   │   ├── session.hpp       # 会话连接管理
 │   │   ├── v_overlapped.hpp  # 重叠IO结构
 │   │   └── WSAContext.hpp    # Winsock上下文
