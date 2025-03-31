@@ -101,6 +101,7 @@ void server::register_message_handler() {
              const send_message &msg) {
         if (msg.type == send_message_type::someone) {
           // 查找接收者的session
+          std::cout << "收到私人消息" << msg.content << std::endl;
           auto it = m_loginUsers.find(msg.receiver);
           if (it != m_loginUsers.end()) {
             // 发送消息给接收者
@@ -112,6 +113,7 @@ void server::register_message_handler() {
           }
         } else {
           // 查找房间并发送消息给房间内的所有用户
+          std::cout << "受到房间消息" << msg.content << std::endl;
           auto rm = get_room(msg.receiver);
           if (rm) {
             message send_ms;
@@ -132,6 +134,7 @@ void server::register_message_handler() {
              const create_room &msg) {
         // 创建房间
         auto room = create_new_room(msg.room_name);
+        std::cout << "room " << msg.room_name << " created" << std::endl;
       });
 
   // 注册进入房间消息处理器
@@ -201,7 +204,7 @@ void server::post_accept() {
                 sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
                 &bytesReceived, overlapped.get())) {
     if (WSAGetLastError() != ERROR_IO_PENDING) {
-      throw std::runtime_error("AcceptEx failed");
+      throw std::runtime_error("AcceptEx failed, ErrorCode" + std::to_string(WSAGetLastError()));
     }
   }
   overlapped.release();
@@ -216,7 +219,7 @@ void server::post_recv(SOCKET client_socket) {
               &overlapped->m_dwBytesReceived, &flags, overlapped.get(),
               nullptr) == SOCKET_ERROR) {
     if (WSAGetLastError() != WSA_IO_PENDING) {
-      throw std::runtime_error("WSARecv failed");
+      throw std::runtime_error("WSARecv failed, ErrorCode" + std::to_string(WSAGetLastError()));
     }
   }
   overlapped.release();
